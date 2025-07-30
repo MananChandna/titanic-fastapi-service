@@ -1,2 +1,4 @@
-astapi
+fastapi
 uvicorn[standard]
+pytest
+flake8
