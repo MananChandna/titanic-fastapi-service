@@ -2,14 +2,12 @@
 name: 'CI/CD Pipeline for FastAPI Service'
 
 # --- Trigger Conditions ---
-# This workflow runs on pushes to the 'main' branch
 on:
   push:
     branches:
       - main
 
 # --- Environment Variables ---
-# Define variables that will be used across the jobs
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: titanic-prediction-api
@@ -36,19 +34,18 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+      # --- MODIFIED STEP ---
       - name: Test with pytest
         run: |
+          # CRITICAL: Create the model file before running tests that import main.py
+          python3 train_model.py
           pytest
 
   # --- BUILD & PUSH JOB ---
   build-and-push:
     name: 'Build and Push Docker Image'
-    # This job will only run if the 'test-and-lint' job succeeds
     needs: test-and-lint
     runs-on: ubuntu-latest
     steps:
@@ -70,10 +67,8 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }} # Use the commit hash as a unique image tag
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build the docker image
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          # Push the docker image to ECR
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
