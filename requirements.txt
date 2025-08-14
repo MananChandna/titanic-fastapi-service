@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+mlflow
 pytest
 flake8
 httpx
@@ -7,3 +8,4 @@ joblib
 scikit-learn==1.3.0
 pandas==2.0.3
 numpy==1.24.4
+
