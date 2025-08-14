@@ -1,0 +1,52 @@
+name: 'Promote Model to Production'
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Name of the model in the MLflow Registry'
+        required: true
+        default: 'production-titanic-predictor'
+      model_version:
+        description: 'Version of the model to promote'
+        required: true
+
+jobs:
+  promote-and-redeploy:
+    name: 'Promote Model and Trigger Redeployment'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install MLflow
+        run: pip install mlflow
+
+      - name: Promote Model
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python -c "
+          import mlflow
+          client = mlflow.tracking.MlflowClient()
+          print('Transitioning model ${{ github.event.inputs.model_name }} version ${{ github.event.inputs.model_version }} to Production...')
+          client.transition_model_version_stage(
+              name='${{ github.event.inputs.model_name }}',
+              version='${{ github.event.inputs.model_version }}',
+              stage='Production',
+              archive_existing_versions=True
+          )
+          print('Promotion successful.')
+          "
+      
+      # This step is added in Task 3
+      - name: Trigger API Redeployment
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: 'CI/CD Pipeline for FastAPI Service'
+          token: ${{ secrets.GITHUB_TOKEN }}
